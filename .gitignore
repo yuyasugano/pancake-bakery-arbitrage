@@ -10,3 +10,4 @@ node_modules/*
 build/contracts/*
 test/
 test/*
+test-test.js

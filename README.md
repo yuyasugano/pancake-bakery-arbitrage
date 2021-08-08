@@ -3,6 +3,11 @@
 A sample application invokes a flashloan with `Flash Swaps` and a monitoring tool in Node.js.
 To know details about `Flash Swaps`: visit https://uniswap.org/docs/v2/core-concepts/flash-swaps/
  
+## Disclaimer
+This repo is not either an investment advice or a recommendation or solicitation to buy or sell any investment and should not be used in the evaluation of the merits of making any investment decision. It should not be relied upon for accounting, legal or tax advice or investment recommendations. The contents reflected herein are subject to change without being updated. 
+
+The codes are written for informational and educational purpose only, https and websocket endpoints might not work well if those endpoint have been depreciated. Please find other available endpoints in that case. Thanks for your understanding.
+ 
 ## software version
  
 Ensure your `node` and `truffle` version is higher than these:
