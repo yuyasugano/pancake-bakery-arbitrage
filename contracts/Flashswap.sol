@@ -11,12 +11,13 @@ import './interfaces/IUniswapV2Router02.sol';
 
 contract Flashswap {
     using SafeMath for uint;
-    uint constant deadline = 10 days;
 
     address private owner;
-    address constant pancakeFactory = 0xBCfCcbde45cE874adCB698cC183deBcF17952812;
-    address constant bakery = 0xCDe540d7eAFE93aC5fE6233Bee57E1270D3E330F;
+    address private constant pancakeFactory = 0xBCfCcbde45cE874adCB698cC183deBcF17952812;
+    address private constant bakery = 0xCDe540d7eAFE93aC5fE6233Bee57E1270D3E330F;
+    address private constant ape = 0xcF0feBd3f17CEf5b47b0cD257aCf6025c5BFf3b7; 
     IUniswapV2Router02 bakeryRouter = IUniswapV2Router02(bakery);
+    IUniswapV2Router02 apeRouter = IUniswapV2Router02(ape);
 
     constructor() {
         owner = msg.sender;
@@ -63,7 +64,8 @@ contract Flashswap {
 
         // IERC20 token that we will sell for otherToken
         IERC20 token = IERC20(_amount0 == 0 ? token1 : token0);
-        token.approve(address(bakeryRouter), amountToken);
+        // token.approve(address(bakeryRouter), amountToken);
+        token.approve(address(apeRouter), amountToken);
 
         // calculate the amount of token how much input token should be reimbursed
         uint amountRequired = UniswapV2Library.getAmountsIn(
@@ -73,18 +75,22 @@ contract Flashswap {
         )[0];
 
         // swap token and obtain equivalent otherToken amountRequired as a result
-        uint amountReceived = bakeryRouter.swapExactTokensForTokens(
+        // need to receive amountRequired at minimum amount to pay back
+        // uint amountReceived = bakeryRouter.swapExactTokensForTokens(
+        uint amountReceived = apeRouter.swapExactTokensForTokens(
             amountToken,
             amountRequired,
             path,
             msg.sender,
-            deadline
+            block.timestamp
         )[1];
 
         require(amountReceived > amountRequired); // fail if we didn't get enough tokens
         IERC20 otherToken = IERC20(_amount0 == 0 ? token0 : token1);
-        otherToken.transfer(msg.sender, amountRequired);
+        // otherToken.transfer(msg.sender, amountRequired);
         otherToken.transfer(owner, amountReceived.sub(amountRequired));
     }
+
+    receive() external payable {}
 }
 

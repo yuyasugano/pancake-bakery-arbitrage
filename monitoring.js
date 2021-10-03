@@ -5,11 +5,13 @@ const BigNumber = require('bignumber.js');
 const abis = require('./abis');
 const { mainnet: addresses } = require('./addresses');
 
+// call WebSocket endpoint instead of https endpoint
 const web3 = new Web3(
     new Web3.providers.WebsocketProvider(process.env.BSC_WSS)
 );
-const { address: admin } = web3.eth.accounts.wallet.add(process.env.PRIVATE_KEY)
+// const { address: admin } = web3.eth.accounts.wallet.add(process.env.PRIVATE_KEY)
 
+// party characters
 // we need pancakeSwap
 const pancakeFactory = new web3.eth.Contract(
     abis.pancakeFactory.pancakeFactory,
@@ -37,15 +39,17 @@ const fromToken = [
 ];
 const fromTokenDecimals = [18];
 
-const toTokens = ['BUSD'];
+const toTokens = ['BUSD', 'USDC'];
 const toToken = [
-    '0xe9e7CEA3DedcA5984780Bafc599bD69ADd087D56' // BUSD
+    '0xe9e7CEA3DedcA5984780Bafc599bD69ADd087D56', // BUSD
+    '0x8ac76a51cc950d9822d68b83fe1ad97b32cd580d', // USDC
 ];
-const toTokenDecimals = [18];
+const toTokenDecimals = [18, 18];
 const amount = process.env.BNB_AMOUNT;
 
 const init = async () => {
     const networkId = await web3.eth.net.getId();
+
     let subscription = web3.eth.subscribe('newBlockHeaders', (error, result) => {
         if (!error) {
             // console.log(result);
@@ -64,23 +68,23 @@ const init = async () => {
         for (let i = 0; i < fromTokens.length; i++) {
             for (let j = 0; j < toTokens.length; j++) {
                 console.log(`Trading ${toTokens[j]}/${fromTokens[i]} ...`);
-
                 const pairAddress = await pancakeFactory.methods.getPair(fromToken[i], toToken[j]).call();
                 console.log(`pairAddress ${toTokens[j]}/${fromTokens[i]} is ${pairAddress}`);
+
                 const unit0 = await new BigNumber(amount);
                 const amount0 = await new BigNumber(unit0).shiftedBy(fromTokenDecimals[i]);
-                console.log(`Input amount of ${fromTokens[i]}: ${amount0.toString()}`);
+                console.log(`Input amount of ${fromTokens[i]}: ${unit0.toString()}`);
 
                 // The quote currency needs to be WBNB
                 let tokenIn, tokenOut;
                 if (fromToken[i] === WBNB) {
                     tokenIn = fromToken[i];
                     tokenOut = toToken[j];
-                }
-
-                if (toToken[j] === WBNB) {
+                } else if (toToken[j] === WBNB) {
                     tokenIn = toToken[j];
                     tokenOut = fromToken[i];
+                } else {
+                    return;
                 }
 
                 // The quote currency is not WBNB
@@ -95,8 +99,8 @@ const init = async () => {
                 console.log(`
                     Buying token at PancakeSwap DEX
                     =================
-                    tokenIn: ${unit0.toString()} ${tokenIn}
-                    tokenOut: ${unit1.toString()} ${tokenOut}
+                    tokenIn: ${unit0.toString()} ${fromTokens[i]}
+                    tokenOut: ${unit1.toString()} ${toTokens[j]}
                 `);
 
                 // call getAmountsOut in BakerySwap
@@ -106,21 +110,24 @@ const init = async () => {
                 console.log(`
                     Buying back token at BakerySwap DEX
                     =================
-                    tokenOut: ${unit1.toString()} ${tokenOut}
-                    tokenIn: ${unit2.toString()} ${tokenIn}
+                    tokenOut: ${unit1.toString()} ${toTokens[j]}
+                    tokenIn: ${unit2.toString()} ${fromTokens[i]}
                 `);
 
                 let profit = await new BigNumber(amount2).minus(amount0);
+                let unit3  = await new BigNumber(unit2).minus(unit0);
+                // not consider transaction cost in here
+                console.log(`Profit in ${fromTokens[i]}: ${unit3.toString()}`);
 
                 if (profit > 0) {
                     console.log(`
                         Block # ${block.number}: Arbitrage opportunity found!
-                        Expected profit: ${profit}
+                        Expected profit: ${unit3.toString()} in ${fromTokens[i]}
                     `);
                 } else {
                     console.log(`
                         Block # ${block.number}: Arbitrage opportunity not found!
-                        Expected profit: ${profit}
+                        Expected profit: ${unit3.toString()} in ${fromTokens[i]}
                     `);
                 }
             }

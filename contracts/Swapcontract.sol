@@ -5,13 +5,14 @@ pragma solidity >=0.6.6 <0.8.0;
 import './utils/Ownable.sol';
 import './utils/SafeMath.sol';
 import './UniswapV2Library.sol';
+import './interfaces/IERC20.sol';
 import './interfaces/IUniswapV2Pair.sol';
 import './interfaces/IUniswapV2Factory.sol';
 import './interfaces/IUniswapV2Router02.sol';
 
 contract Swapcontract is Ownable {
     using SafeMath for uint;
-    address private constant pancakeFactory = 0xBCfCcbde45cE874adCB698cC183deBcF17952812;
+    address private constant pancakeRouter = 0x05fF2B0DB69458A0750badebc4f9e13aDd608C7F;
     address private constant WBNB = 0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c;
 
     constructor() {}

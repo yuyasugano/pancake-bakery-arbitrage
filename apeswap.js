@@ -4,13 +4,14 @@ const BigNumber = require('bignumber.js');
 
 const abis = require('./abis');
 const { mainnet: addresses } = require('./addresses');
-const Flashswap = require('./build/contracts/Flashswap.json');
 
+// call WebSocket endpoint instead of https endpoint
 const web3 = new Web3(
     new Web3.providers.WebsocketProvider(process.env.BSC_WSS)
 );
-const { address: admin } = web3.eth.accounts.wallet.add(process.env.PRIVATE_KEY)
+// const { address: admin } = web3.eth.accounts.wallet.add(process.env.PRIVATE_KEY)
 
+// party characters
 // we need pancakeSwap
 const pancakeFactory = new web3.eth.Contract(
     abis.pancakeFactory.pancakeFactory,
@@ -19,6 +20,16 @@ const pancakeFactory = new web3.eth.Contract(
 const pancakeRouter = new web3.eth.Contract(
     abis.pancakeRouter.pancakeRouter,
     addresses.pancake.router
+);
+
+// use ApeSwap instead of bakerySwap
+const apeFactory = new web3.eth.Contract(
+    abis.apeFactory.apeFactory,
+    addresses.ape.factory
+);
+const apeRouter = new web3.eth.Contract(
+    abis.apeRouter.apeRouter,
+    addresses.ape.router
 );
 
 // we need bakerySwap
@@ -31,16 +42,6 @@ const bakeryRouter = new web3.eth.Contract(
     addresses.bakery.router
 ); */
 
-// use ApeSwap instead of bakerySwap
-const apeFactory = new web3.eth.Contract(
-    abis.apeFactory.apeFactory,
-    addresses.ape.factory
-);
-const apeRouter = new web3.eth.Contract(
-    abis.apeRouter.apeRouter,
-    addresses.ape.router
-);
-
 const WBNB = '0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c';
 const fromTokens = ['WBNB'];
 const fromToken = [
@@ -50,18 +51,13 @@ const fromTokenDecimals = [18];
 
 const toTokens = ['BUSD'];
 const toToken = [
-    '0xe9e7CEA3DedcA5984780Bafc599bD69ADd087D56' // BUSD
+    '0xe9e7CEA3DedcA5984780Bafc599bD69ADd087D56', // BUSD
 ];
 const toTokenDecimals = [18];
 const amount = process.env.BNB_AMOUNT;
 
 const init = async () => {
     const networkId = await web3.eth.net.getId();
-
-    const flashswap = new web3.eth.Contract(
-        Flashswap.abi,
-        Flashswap.networks[networkId].address
-    );
 
     let subscription = web3.eth.subscribe('newBlockHeaders', (error, result) => {
         if (!error) {
@@ -81,12 +77,12 @@ const init = async () => {
         for (let i = 0; i < fromTokens.length; i++) {
             for (let j = 0; j < toTokens.length; j++) {
                 console.log(`Trading ${toTokens[j]}/${fromTokens[i]} ...`);
-
                 const pairAddress = await pancakeFactory.methods.getPair(fromToken[i], toToken[j]).call();
                 console.log(`pairAddress ${toTokens[j]}/${fromTokens[i]} is ${pairAddress}`);
+
                 const unit0 = await new BigNumber(amount);
                 const amount0 = await new BigNumber(unit0).shiftedBy(fromTokenDecimals[i]);
-                console.log(`Input amount of ${fromTokens[i]}: ${unit0.toString()}`);
+                console.log(`Input amount of ${fromTokens[i]}: ${amount0.toString()}`);
 
                 // The quote currency needs to be WBNB
                 let tokenIn, tokenOut;
@@ -107,6 +103,7 @@ const init = async () => {
 
                 // call getAmountsOut in PancakeSwap
                 const amounts = await pancakeRouter.methods.getAmountsOut(amount0, [tokenIn, tokenOut]).call();
+                console.log(`1: ${amounts[0]}, 2: ${amounts[1]}`);
                 const unit1 = await new BigNumber(amounts[1]).shiftedBy(-toTokenDecimals[j]);
                 const amount1 = await new BigNumber(amounts[1]);
                 console.log(`
@@ -118,6 +115,7 @@ const init = async () => {
 
                 // call getAmountsOut in ApeSwap
                 const amounts2 = await apeRouter.methods.getAmountsOut(amount1, [tokenOut, tokenIn]).call();
+                console.log(`1: ${amounts2[0]}, 2: ${amounts2[1]}`);
                 const unit2 = await new BigNumber(amounts2[1]).shiftedBy(-fromTokenDecimals[i]);
                 const amount2 = await new BigNumber(amounts2[1]);
                 console.log(`
@@ -129,43 +127,19 @@ const init = async () => {
 
                 let profit = await new BigNumber(amount2).minus(amount0);
                 let unit3  = await new BigNumber(unit2).minus(unit0);
+                // not consider transaction cost in here
+                console.log(`Profit in ${fromTokens[i]}: ${unit3.toString()}`);
 
                 if (profit > 0) {
-                    const tx = flashswap.methods.startArbitrage(
-                        tokenIn,
-                        tokenOut,
-                        0,
-                        amount1
-                    );
-
-                    /* const [gasPrice, gasCost] = await Promise.all([
-                        web3.eth.getGasPrice(),
-                        tx.estimateGas({from: admin}),
-                    ]); */
-
-                    let gasPrice = 5000000000; // 5Gwei
-                    let gasCost  = 510000;
-
-                    const txCost = await web3.utils.toBN(gasCost) * web3.utils.toBN(gasPrice);
-                    profit = await new BigNumber(profit).minus(txCost);
-
-                    if (profit > 0) {
-                        console.log(`Block # ${block.number}: Arbitrage opportunity found! Expected profit: ${profit}`);
-                        const data = tx.encodeABI();
-                        const txData = {
-                            from: admin,
-                            to: flashswap.options.address,
-                            data,
-                            gas: gasCost,
-                            gasPrice: gasPrice,
-                        };
-                        const receipt = await web3.eth.sendTransaction(txData);
-                        console.log(`Transaction hash: ${receipt.transactionHash}`);
-                    } else {
-                        console.log('Transaction cost did not cover profits');
-                    }
+                    console.log(`
+                        Block # ${block.number}: Arbitrage opportunity found!
+                        Expected profit: ${unit3.toString()} in ${fromTokens[i]}
+                    `);
                 } else {
-                    console.log(`Block # ${block.number}: Arbitrage opportunity not found! Expected profit: ${profit}`);
+                    console.log(`
+                        Block # ${block.number}: Arbitrage opportunity not found!
+                        Expected profit: ${unit3.toString()} in ${fromTokens[i]}
+                    `);
                 }
             }
         }

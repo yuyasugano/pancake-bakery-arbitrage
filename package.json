@@ -8,7 +8,9 @@
   },
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "swap": "node swap.js"
+    "swap": "node swap.js",
+    "monitor": "node monitoring.js",
+    "start": "node index.js"
   },
   "keywords": [],
   "author": "",
