@@ -4,10 +4,10 @@ pragma solidity >=0.6.6 <0.8.0;
 
 import './utils/SafeMath.sol';
 import './UniswapV2Library.sol';
-import './interfaces/IUniswapV2Router02.sol';
+import './interfaces/IERC20.sol';
 import './interfaces/IUniswapV2Pair.sol';
 import './interfaces/IUniswapV2Factory.sol';
-import './interfaces/IERC20.sol';
+import './interfaces/IUniswapV2Router02.sol';
 
 contract Flashswap {
     using SafeMath for uint;
