@@ -13,22 +13,24 @@ The codes are written for informational and educational purpose only, https and 
 Ensure your `node` and `truffle` version is higher than these:
 ```sh
 $ node -v
-v13.7.0
+v14.17.6
 $ truffle version
-Truffle v5.2.2 (core: 5.2.2)
-Solidity v0.5.16 (solc-js)
-Node v13.7.0
-Web3.js v1.2.9
+Truffle v5.3.7 (core: 5.3.7)
+Solidity - >=0.6.6 <0.8.0 (solc-js)
+Node v14.17.6
+Web3.js v1.3.6
 ```
    
 ## environment variables
  
 ```
+TEST_AMOUNT=0.05
 BNB_AMOUNT=100
 WALLET_ADDRESS=0x<your wallet address>
 PRIVATE_KEY=<private key>
 BSS_WSS=wss://bsc-ws-node.nariox.org:443
 BSS_HTTPS=https://bsc-dataseed.binance.org/
+MORALIS_BSC=https://speedy-nodes-nyc.moralis.io/<your account>/bsc/mainnet
 ```
  
 ## setup steps
@@ -47,4 +49,4 @@ truffle migrate --network mainnet
  
 ## License
  
-This library is licensed under the MIT License.
+This library is licensed under the MIT License. 
