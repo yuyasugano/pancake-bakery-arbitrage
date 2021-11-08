@@ -87,7 +87,7 @@ contract Flashswap {
 
         require(amountReceived > amountRequired); // fail if we didn't get enough tokens
         IERC20 otherToken = IERC20(_amount0 == 0 ? token0 : token1);
-        // otherToken.transfer(msg.sender, amountRequired);
+        otherToken.transfer(msg.sender, amountRequired);
         otherToken.transfer(owner, amountReceived.sub(amountRequired));
     }
 
