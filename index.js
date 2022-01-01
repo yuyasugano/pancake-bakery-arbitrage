@@ -134,8 +134,8 @@ const init = async () => {
                     const tx = flashswap.methods.startArbitrage(
                         tokenIn,
                         tokenOut,
-                        0,
-                        amount1
+                        amount0,
+                        0
                     );
 
                     /* const [gasPrice, gasCost] = await Promise.all([
