@@ -10,4 +10,7 @@ node_modules/*
 build/contracts/*
 test/
 test/*
-test-test.js
+log_arbitrage.txt
+*.swp
+misc/
+misc/*

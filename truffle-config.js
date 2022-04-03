@@ -37,6 +37,10 @@ module.exports = {
    * $ truffle test --network <network-name>
    */
 
+  // compile and migrate Flashswap.sol and the relevant files only
+  // https://trufflesuite.com/docs/truffle/reference/configuration.html#contracts_directory
+  contracts_directory: "./contracts",
+
   networks: {
     // Useful for testing. The `development` name is special - truffle uses it by default
     // if it's defined here and no other network is specified at the command line.
@@ -75,6 +79,14 @@ module.exports = {
         process.env.BSC_HTTPS
       ),
       network_id: 56
+    },
+
+    testnet: {
+      provider: () => new HDWalletProvider(
+        process.env.PRIVATE_TEST_KEY,
+        process.env.BSC_TEST_HTTPS
+      ),
+      network_id: 97
     },
 
     // Useful for private networks

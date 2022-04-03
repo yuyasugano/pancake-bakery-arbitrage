@@ -3,17 +3,17 @@
 pragma solidity >=0.6.6 <0.8.0;
 
 import './utils/Ownable.sol';
-import './utils/SafeMath.sol';
 import './UniswapV2Library.sol';
 import './interfaces/IERC20.sol';
 import './interfaces/IUniswapV2Pair.sol';
 import './interfaces/IUniswapV2Factory.sol';
 import './interfaces/IUniswapV2Router02.sol';
 
-contract Swapcontract is Ownable {
-    using SafeMath for uint;
-    address private constant pancakeRouter = 0x05fF2B0DB69458A0750badebc4f9e13aDd608C7F;
-    address private constant WBNB = 0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c;
+contract Swapcontracttest is Ownable {
+    // https://testnet.bscscan.com/address/0xD99D1c33F9fC3444f8101754aBC46c52416550D1#code
+    address private constant pancakeRouter = 0xD99D1c33F9fC3444f8101754aBC46c52416550D1;
+    // https://testnet.bscscan.com/address/0x094616f0bdfb0b526bd735bf66eca0ad254ca81f
+    address private constant WBNB = 0x094616F0BdFB0b526bD735Bf66Eca0Ad254ca81F;
 
     constructor() {}
 
@@ -44,8 +44,8 @@ contract Swapcontract is Ownable {
             amount0,
             amount1,
             path,
-            msg.sender,
-            block.timestamp
+            msg.sender, // or address(this), and transfer the swapped token to msg.sender
+            block.timestamp + 60
         );
     }
 
