@@ -37,7 +37,7 @@ module.exports = {
    * $ truffle test --network <network-name>
    */
 
-  // compile and migrate Flashswap.sol and the relevant files only
+  // compile and migrate Flashswap.sol and the relevant files only, ignore subcontract
   // https://trufflesuite.com/docs/truffle/reference/configuration.html#contracts_directory
   contracts_directory: "./contracts",
 

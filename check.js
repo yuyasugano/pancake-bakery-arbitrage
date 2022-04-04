@@ -65,7 +65,7 @@ const init = async () => {
             const check = await flashswap.methods.check(pair.tokenPay, pair.tokenSwap, new BigNumber(pair.amountTokenPay * 1e18), pair.sourceRouter, pair.targetRouter).call();
             const profit = check[0];
 
-            console.log(`prifit: ${profit}.`);
+            console.log(`profit: ${profit}.`);
         })
     })
 
