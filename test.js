@@ -27,6 +27,7 @@ const web3 = new Web3(
     })
 );
 
+const { testnet: addresses } = require('./addresses');
 const { address: admin } = web3.eth.accounts.wallet.add(process.env.PRIVATE_TEST_KEY);
 
 const prices = {};
@@ -37,14 +38,6 @@ const flashswap = new web3.eth.Contract(
 
 const BNB_TESTNET = '0x094616F0BdFB0b526bD735Bf66Eca0Ad254ca81F';
 const BUSD_TESTNET = '0xeD24FC36d5Ee211Ea25A80239Fb8C4Cfd80f12Ee';
-
-const { mainnet: addresses } = require('./addresses');
-
-// testnet
-const pancake = {
-    router: "0xD99D1c33F9fC3444f8101754aBC46c52416550D1",
-    factory: "0x6725F303b657a9451d8BA641348b6761A6CC7a17",
-};
 
 const getPrices = async() => {
     const response = await request('https://api.coingecko.com/api/v3/simple/price?ids=binancecoin,ethereum,bitcoin,tether,usd-coin,busd&vs_currencies=usd');
@@ -72,9 +65,9 @@ const pair = {
     amountTokenPay: process.env.BNB_TEST_AMOUNT,
     tokenPay: BNB_TESTNET,
     tokenSwap: BUSD_TESTNET,
-    sourceRouter: pancake.router,
-    targetRouter: pancake.router, // single router trade
-    sourceFactory: pancake.factory,
+    sourceRouter: addresses.pancake.router,
+    targetRouter: addresses.pancake.router, // single router trade
+    sourceFactory: addresses.pancake.factory,
 }
 
 const init = async () => {
