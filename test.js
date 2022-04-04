@@ -2,133 +2,150 @@ require('dotenv').config();
 const Web3 = require('web3');
 const BigNumber = require('bignumber.js');
 
-const abis = require('./abis');
-const { mainnet: addresses } = require('./addresses');
+const Flashswap = require('./build/contracts/Flashswaptest.json');
+const TransactionSender = require('./src/transaction_send');
+
+const fs = require('fs');
+const util = require('util');
+const request = require('async-request');
+
+var log_file = fs.createWriteStream(__dirname + '/log_arbitrage_test.txt', { flags: 'w' });
+var log_stdout = process.stdout;
+console.log = function (d) {
+    log_file.write(util.format(d) + '\n');
+    log_stdout.write(util.format(d) + '\n');
+};
 
 const web3 = new Web3(
-    new Web3.providers.WebsocketProvider(process.env.BSC_WSS)
-);
-const { address: admin } = web3.eth.accounts.wallet.add(process.env.PRIVATE_KEY)
-
-// we need pancakeSwap
-const pancakeFactory = new web3.eth.Contract(
-    abis.pancakeFactory.pancakeFactory,
-    addresses.pancake.factory
-);
-const pancakeRouter = new web3.eth.Contract(
-    abis.pancakeRouter.pancakeRouter,
-    addresses.pancake.router
-);
-
-// we need bakerySwap
-const bakeryFactory = new web3.eth.Contract(
-    abis.bakeryFactory.bakeryFactory,
-    addresses.bakery.factory
-);
-const bakeryRouter = new web3.eth.Contract(
-    abis.bakeryRouter.bakeryRouter,
-    addresses.bakery.router
-);
-
-const WBNB = '0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c';
-const fromTokens = ['WBNB'];
-const fromToken = [
-    '0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c' // WBNB
-];
-const fromTokenDecimals = [18];
-
-const toTokens = ['BUSD'];
-const toToken = [
-    '0xe9e7CEA3DedcA5984780Bafc599bD69ADd087D56' // BUSD
-];
-const toTokenDecimals = [18];
-const amount = process.env.BNB_AMOUNT;
-
-const init = async () => {
-    const networkId = await web3.eth.net.getId();
-    let subscription = web3.eth.subscribe('newBlockHeaders', (error, result) => {
-        if (!error) {
-            // console.log(result);
-            return;
-        }
-        console.error(error);
-    })
-    .on("connected", subscriptionId => {
-        console.log(`You are connected on ${subscriptionId}`);
-    })
-    .on('data', async block => {
-        console.log('-------------------------------------------------------------');
-        console.log(`New block received. Block # ${block.number}`);
-        console.log(`GasLimit: ${block.gasLimit} and Timestamp: ${block.timestamp}`);
-
-        for (let i = 0; i < fromTokens.length; i++) {
-            for (let j = 0; j < toTokens.length; j++) {
-                console.log(`Trading ${toTokens[j]}/${fromTokens[i]} ...`);
-
-                const pairAddress = await pancakeFactory.methods.getPair(fromToken[i], toToken[j]).call();
-                console.log(`pairAddress ${toTokens[j]}/${fromTokens[i]} is ${pairAddress}`);
-                const unit0 = await new BigNumber(amount);
-                const amount0 = await new BigNumber(unit0).shiftedBy(fromTokenDecimals[i]);
-                console.log(`Input amount of ${fromTokens[i]}: ${amount0.toString()}`);
-
-                // The quote currency needs to be WBNB
-                let tokenIn, tokenOut;
-                if (fromToken[i] === WBNB) {
-                    tokenIn = fromToken[i];
-                    tokenOut = toToken[j];
-                }
-
-                if (toToken[j] === WBNB) {
-                    tokenIn = toToken[j];
-                    tokenOut = fromToken[i];
-                }
-
-                // The quote currency is not WBNB
-                if (typeof tokenIn === 'undefined') {
-                    return;
-                }
-
-                // call getAmountsOut in PancakeSwap
-                const amounts = await pancakeRouter.methods.getAmountsOut(amount0, [tokenIn, tokenOut]).call();
-                const unit1 = await new BigNumber(amounts[1]).shiftedBy(-toTokenDecimals[j]);
-                const amount1 = await new BigNumber(amounts[1]);
-                console.log(`
-                    Buying token at PancakeSwap DEX
-                    =================
-                    tokenIn: ${unit0.toString()} ${tokenIn}
-                    tokenOut: ${unit1.toString()} ${tokenOut}
-                `);
-
-                // call getAmountsOut in BakerySwap
-                const amounts2 = await bakeryRouter.methods.getAmountsOut(amount1, [tokenOut, tokenIn]).call();
-                const unit2 = await new BigNumber(amounts2[1]).shiftedBy(-fromTokenDecimals[i]);
-                const amount2 = await new BigNumber(amounts2[1]);
-                console.log(`
-                    Buying back token at BakerySwap DEX
-                    =================
-                    tokenOut: ${unit1.toString()} ${tokenOut}
-                    tokenIn: ${unit2.toString()} ${tokenIn}
-                `);
-
-                let profit = await new BigNumber(amount2).minus(amount0);
-
-                if (profit > 0) {
-                    console.log(`
-                        Block # ${block.number}: Arbitrage opportunity found!
-                        Expected profit: ${profit}
-                    `);
-                } else {
-                    console.log(`
-                        Block # ${block.number}: Arbitrage opportunity not found!
-                        Expected profit: ${profit}
-                    `);
-                }
-            }
+    new Web3.providers.HttpProvider(process.env.BSC_TEST_HTTPS, {
+        reconnect: {
+            auto: true,
+            delay: 5000, // ms
+            maxAttempts: 15,
+            onTimeout: false
         }
     })
-    .on('error', error => {
-        console.log(error);
-    });
+);
+
+const { address: admin } = web3.eth.accounts.wallet.add(process.env.PRIVATE_TEST_KEY);
+
+const prices = {};
+const flashswap = new web3.eth.Contract(
+    Flashswap.abi,
+    Flashswap.networks[97].address
+);
+
+const BNB_TESTNET = '0x094616F0BdFB0b526bD735Bf66Eca0Ad254ca81F';
+const BUSD_TESTNET = '0xeD24FC36d5Ee211Ea25A80239Fb8C4Cfd80f12Ee';
+
+const { mainnet: addresses } = require('./addresses');
+
+// testnet
+const pancake = {
+    router: "0xD99D1c33F9fC3444f8101754aBC46c52416550D1",
+    factory: "0x6725F303b657a9451d8BA641348b6761A6CC7a17",
+};
+
+const getPrices = async() => {
+    const response = await request('https://api.coingecko.com/api/v3/simple/price?ids=binancecoin,ethereum,bitcoin,tether,usd-coin,busd&vs_currencies=usd');
+
+    const prices = {};
+
+    try {
+        const json = JSON.parse(response.body);
+        prices['0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c'.toLowerCase()] = json.binancecoin.usd;
+        prices['0xe9e7CEA3DedcA5984780Bafc599bD69ADd087D56'.toLowerCase()] = json.busd.usd;
+        prices['0x2170Ed0880ac9A755fd29B2688956BD959F933F8'.toLowerCase()] = json.ethereum.usd;
+        prices['0x7130d2A12B9BCbFAe4f2634d864A1Ee1Ce3Ead9c'.toLowerCase()] = json.bitcoin.usd;
+        prices['0x55d398326f99059ff775485246999027b3197955'.toLowerCase()] = json.tether.usd;
+        // prices['??'.toLowerCase()] = json['usd-coin'].usd;
+    } catch (e) {
+        console.error(e)
+        return {};
+    }
+
+    return prices;
 }
 
-init();
+const pair = {
+    name: 'BNB to BUSD, pancake>pancake',
+    amountTokenPay: process.env.BNB_TEST_AMOUNT,
+    tokenPay: BNB_TESTNET,
+    tokenSwap: BUSD_TESTNET,
+    sourceRouter: pancake.router,
+    targetRouter: pancake.router, // single router trade
+    sourceFactory: pancake.factory,
+}
+
+const init = async () => {
+    console.log('starting: ', pair.name);
+
+    const transactionSender = TransactionSender.factory(process.env.BSC_TEST_HTTPS.split(','));
+
+    let nonce = await web3.eth.getTransactionCount(admin);
+    let gasPrice = await web3.eth.getGasPrice();
+    let blocknumber = await web3.eth.getBlockNumber();
+
+    const owner = await flashswap.methods.owner().call();
+    console.log(`started: wallet ${admin} - gasPrice ${gasPrice} - contract owner: ${owner}`);
+
+    let handler = async () => {
+        const myPrices = await getPrices();
+        if (Object.keys(myPrices).length > 0) {
+            for (const [key, value] of Object.entries(myPrices)) {
+                prices[key.toLowerCase()] = value;
+            }
+        }
+    };
+
+    await handler(); // get prices from CoinGecko
+
+    const check = await flashswap.methods.check(pair.tokenPay, pair.tokenSwap, new BigNumber(pair.amountTokenPay * 1e18), pair.sourceRouter, pair.targetRouter).call();
+    const profit = check[0];
+
+    let s = pair.tokenPay.toLowerCase();
+    const price = prices[s];
+    if (!price) {
+        console.log('invalid price', pair.tokenPay);
+        return;
+    }
+
+    const tx = flashswap.methods.start(
+        blocknumber + process.env.BLOCKNUMBER,
+        pair.tokenPay,
+        pair.tokenSwap,
+        new BigNumber(pair.amountTokenPay * 1e18),
+        pair.sourceRouter,
+        pair.targetRouter,
+        pair.sourceFactory,
+    );
+
+    let estimateGas;
+    try {
+        estimateGas = await tx.estimateGas({from: admin});
+    } catch (e) {
+        console.log(`[${blocknumber}] [${new Date().toLocaleString()}]: [${pair.name}]`, 'gasCost error', e.message);
+        return;
+    }
+
+    const myGasPrice = new BigNumber(gasPrice).plus(gasPrice * 0.2212).toString();
+    const txCostBNB = Web3.utils.toBN(estimateGas) * Web3.utils.toBN(myGasPrice);
+
+    const data = tx.encodeABI();
+    const txData = {
+        from: admin,
+        to: flashswap.options.address,
+        data: data,
+        gas: estimateGas,
+        gasPrice: new BigNumber(myGasPrice),
+        nonce: nonce
+    };
+
+    try {
+        await transactionSender.sendTransaction(txData);
+    } catch (e) {
+        console.error('transaction error', e);
+    }
+}
+
+init();   

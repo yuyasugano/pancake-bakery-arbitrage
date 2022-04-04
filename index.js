@@ -134,7 +134,6 @@ const init = async () => {
     }, 1000 * 60 * 3);
 
     const owner = await flashswap.methods.owner().call();
-
     console.log(`started: wallet ${admin} - gasPrice ${gasPrice} - contract owner: ${owner}`);
 
     let handler = async () => {
