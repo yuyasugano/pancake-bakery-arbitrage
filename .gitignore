@@ -11,7 +11,7 @@ build/contracts/*
 test/
 test/*
 log_arbitrage.txt
-log_arbitrage_text.txt
+log_arbitrage_test.txt
 *.swp
 misc/
 misc/*

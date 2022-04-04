@@ -1,2 +1,0 @@
-starting: 
-started: wallet 0x52EBbDC5f347F09225E3981113b1eAF5D5F82cc2 - gasPrice 10000000000 - contract owner: 0x52EBbDC5f347F09225E3981113b1eAF5D5F82cc2
