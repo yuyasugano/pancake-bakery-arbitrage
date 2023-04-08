@@ -24,7 +24,7 @@ contract Flashswap {
 
     address public owner;
 
-    constructor() {
+    constructor() public {
         owner = msg.sender;
     }
 
@@ -94,7 +94,7 @@ contract Flashswap {
         address _sender,
         uint _amount0,
         uint _amount1,
-        bytes calldata _data
+        bytes memory _data
     ) internal {
         // obtain an amount of token that you exchanged, for example BUSD
         uint amountToken = _amount0 == 0 ? _amount1 : _amount0;
